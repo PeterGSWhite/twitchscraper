@@ -7,6 +7,11 @@ from datetime import datetime
 import re
 from db import create_connection, insert_category, insert_cat_occurrence, insert_channel, insert_stream
 
+# Misc helper objects
+LANG = 'en'
+lang_codes = {
+    'en': '6ea6bca4-4712-4ab9-a906-e3336a9d8039'
+}
 def get_valid_filename(s):
     """Turn string into valid filename"""
     s = str(s).strip().replace(' ', '_')
@@ -21,8 +26,11 @@ driver = webdriver.Firefox(options=options)
 # Scrape Directory page
 url = 'https://www.twitch.tv/directory?sort=VIEWER_COUNT'
 driver.get(url)
-# ToDo: If cookies button - click it
+# If cookies button - click it
 driver.implicitly_wait(3)
+consent_banner = driver.find_element_by_class_name('consent-banner')
+accept_button = consent_banner.find_element_by_xpath(".//button[@data-a-target='consent-banner-accept']")
+accept_button.click()
 
 categories = driver.find_elements_by_class_name('tw-card')
 cats_q = deque() # want to scrape categories from left to right (so it looks nicer when taking screenshots), queue makes this efficient
@@ -46,16 +54,16 @@ print('Saving screenshot of Directory page')
 ts = datetime.now().strftime("%m-%dT%H%M%S")
 driver.save_screenshot(f'dir_page_{ts}.png')
 
-i = 0
+# Set language tag
+driver.execute_script("localStorage.setItem(arguments[0],arguments[1])", 'languageTags', f'["{lang_codes[LANG]}"]')
 
+i = 0
 # Scrape Category pages
 while cats_q and i < 2:
     title, cat_href = cats_q.popleft()
     url = f'{cat_href}?sort=VIEWER_COUNT'
     print('Scraping', title, url)
     driver.get(url)
-    # ToDo: Set language (Just English for starters)
-    # ToDo: If cookies button - click it
     driver.implicitly_wait(3)
 
     streams = driver.find_elements_by_tag_name('article')
