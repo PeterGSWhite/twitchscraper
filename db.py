@@ -4,15 +4,18 @@ from sqlite3 import Error
 # Formatting helper functions
 def views_str_to_int(s):
     """Input Examples: 
-        '100 viewers', '100,000 viewers', '100K viewers' '82.4K viewers'"""
+        '100 viewers', '100,000 viewers', '100K viewers' '82.4K viewers' '1 viewer'
+        Output: just an integer like 10000"""
+    if s == '1 viewer':
+        return 1
     figure = s.split('viewers')[0]
     if 'K' in figure:
         figure = figure.split('K')[0]
         return int(float(figure)*1000)
     else:
         return int(figure.replace(',', ''))
-    
 def url_to_id(s, index):
+    """Where a url contains a unique identifier after index number of '/', return that identifier"""
     return s.split('/')[index]
 
 # SQL Statements
@@ -47,7 +50,7 @@ CREATE TABLE IF NOT EXISTS streams (
 ); """
 
 def create_table(conn, create_table_sql):
-    """ create a table from the create_table_sql statement
+    """Create a table from the create_table_sql statement
     :param conn: Connection object
     :param create_table_sql: a CREATE TABLE statement
     :return:
@@ -59,6 +62,7 @@ def create_table(conn, create_table_sql):
         print(e)
 
 def create_connection(db_file):
+    """Create a database connection"""
     conn = None
     try:
         conn = sqlite3.connect(db_file)
@@ -69,6 +73,7 @@ def create_connection(db_file):
 
 # Insert methods
 def insert_category(conn, url, title):
+    """Insert new stream categories into the categories table"""
     category = (url_to_id(url, -1), title)
     sql = ''' INSERT OR IGNORE INTO categories(id,title)
               VALUES(?,?) '''
@@ -76,6 +81,7 @@ def insert_category(conn, url, title):
     cur.execute(sql, category)
     conn.commit()
 def insert_cat_occurrence(conn, url, viewers):
+    """Insert the live stats of a stream category into cat_occurences"""
     occ = (views_str_to_int(viewers), url_to_id(url, -1))
     sql = ''' INSERT OR IGNORE INTO cat_occurrences(viewers, cat_id)
               VALUES(?,?) '''
@@ -83,6 +89,7 @@ def insert_cat_occurrence(conn, url, viewers):
     cur.execute(sql, occ)
     conn.commit()
 def insert_channel(conn, channel_url, channel_name):
+    """Insert new channels into the channels table """
     channel = (url_to_id(channel_url, -2), channel_name)
     sql = ''' INSERT OR IGNORE INTO channels(id,name)
               VALUES(?,?) '''
@@ -90,6 +97,7 @@ def insert_channel(conn, channel_url, channel_name):
     cur.execute(sql, channel)
     conn.commit()
 def insert_stream(conn, channel_url, cat_url, viewers):
+    """Insert the live stats of the stream which a channel is broadcasting into the streams table"""
     stream = (views_str_to_int(viewers), url_to_id(cat_url, -1), url_to_id(channel_url, -2))
     sql = ''' INSERT OR IGNORE INTO streams(viewers,cat_id,channel_id)
               VALUES(?,?,?) '''
@@ -103,12 +111,9 @@ if __name__ == "__main__":
     if conn is not None:
         # create categories table
         create_table(conn, sql_create_categories_table)
-
         # create cat_occurrences table
         create_table(conn, sql_create_cat_occurrences_table)
-
         # create channels table
         create_table(conn, sql_create_channels_table)
-
         # create streams table
         create_table(conn, sql_create_stream_table)

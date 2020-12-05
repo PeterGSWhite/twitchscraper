@@ -16,6 +16,12 @@ def get_valid_filename(s):
     """Turn string into valid filename"""
     s = str(s).strip().replace(' ', '_')
     return re.sub(r'(?u)[^-\w.]', '', s)
+def save_screenshot(page_name):
+    print(f'Saving screenshot of {page_name.capitalize()} page')
+    page_name = get_valid_filename(page_name)
+    ts = datetime.now().strftime("%m-%dT%H%M%S")
+    driver.save_screenshot(f'{page_name}_{ts}.png')
+
 
 # Setting up
 conn = create_connection('example.db')
@@ -50,18 +56,16 @@ for cat in categories:
     print(title,href)
     cats_q.append((title, href))
 
-print('Saving screenshot of Directory page')
-ts = datetime.now().strftime("%m-%dT%H%M%S")
-driver.save_screenshot(f'dir_page_{ts}.png')
+save_screenshot('directory')
 
 # Set language tag
 driver.execute_script("localStorage.setItem(arguments[0],arguments[1])", 'languageTags', f'["{lang_codes[LANG]}"]')
 
-i = 0
+i = 0 # dev var to limit stream scraping
 # Scrape Category pages
-while cats_q and i < 2:
+while cats_q:# and i < 2:
     title, cat_href = cats_q.popleft()
-    url = f'{cat_href}?sort=VIEWER_COUNT'
+    url = f'{cat_href}?sort=VIEWER_COUNT' # Gets the first page of results only (most popular)
     print('Scraping', title, url)
     driver.get(url)
     driver.implicitly_wait(3)
@@ -75,12 +79,10 @@ while cats_q and i < 2:
         print(viewers, channel_name, channel_href)
 
         # Add to DB
-        insert_channel(conn, channel_href, channel_name)
-        insert_stream(conn, channel_href, cat_href, viewers)
+        insert_channel(conn, channel_href, channel_name) # The channel itself is added to a table
+        insert_stream(conn, channel_href, cat_href, viewers) # The live stats of this particular stream is added to a table
     
-    print(f'Saving screenshot of {title} page')
-    ts = datetime.now().strftime("%m-%dT%H%M%S")
-    driver.save_screenshot(f'{get_valid_filename(title)}_page_{ts}.png')
+    save_screenshot(title)
     i += 1
 
 # Shutting down
